@@ -11,7 +11,7 @@ val dispatcher = Executors
 
 fun main(args: Array<String>) {
     runBlocking {
-        matrixMultiplication()
+        parallelMatrixMultiplication()
     }
     dispatcher.close()
 }

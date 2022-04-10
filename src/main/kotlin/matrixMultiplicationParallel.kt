@@ -1,9 +1,12 @@
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import kotlin.math.ceil
+import kotlin.math.pow
 import kotlin.random.Random
 
-suspend fun matrixMultiplication() {
+suspend fun parallelMatrixMultiplication() {
     val lineA = 3
     val columnA = 3
     val lineB = 3
@@ -16,8 +19,22 @@ suspend fun matrixMultiplication() {
     for (i in 0 until lineA) {
         for (j in 0 until columnB) {
             runBlocking {
-                val r = multiplyParallel(matrixA[i], getColumn(j, matrixB))
-                matrixC[i][j] = r.reduceParallel { acc: Int, item: Int -> acc + item }
+                var results = matrixA[i].zip(getColumn(j, matrixB)) {itemA, itemB -> Pair (itemA, itemB)}
+
+                val chunksCount = Runtime.getRuntime().availableProcessors()
+                var chunkSize = 2
+
+                if(results.size >= chunksCount*2)
+                    chunkSize = ceil(results.size / (chunksCount.toDouble())).toInt()
+
+                matrixC[i][j] = results.chunked(chunkSize).map { sublist ->
+                    CoroutineScope(dispatcher).async {
+                        sublist.map { (a, b) ->
+                            a * b
+                        }.reduceParallel { acc: Int, item: Int -> acc + item }
+                    }
+                }.map { it.await() }.reduceParallel { acc: Int, item: Int -> acc + item }
+
             }
         }
     }
@@ -26,16 +43,10 @@ suspend fun matrixMultiplication() {
 
 }
 
-suspend fun multiplyParallel(vector1: Array<Int>, vector2: MutableList<Int>) =
-    CoroutineScope(dispatcher).async {
-        //println("I am running on ${Thread.currentThread().name}")
-        return@async vector1.zip(vector2) {itemA, itemB -> itemA * itemB}
-    }.await()
-
 fun printMatrix(matrix: Array<Array<Int>>) {
-    for (i in 0 until 3) {
-        for (j in 0 until 3) {
-            print(matrix[i][j].toString() + " ")
+    for (element in matrix) {
+        for (j in 0 until matrix[0].size) {
+            print(element[j].toString() + " ")
         }
         println()
     }
