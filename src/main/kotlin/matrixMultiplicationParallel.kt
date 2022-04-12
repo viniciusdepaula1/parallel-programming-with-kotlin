@@ -6,7 +6,7 @@ import kotlin.math.ceil
 import kotlin.math.pow
 import kotlin.random.Random
 
-suspend fun parallelMatrixMultiplication() {
+suspend fun matrixMultiplicationParallel() {
     val lineA = 3
     val columnA = 3
     val lineB = 3
